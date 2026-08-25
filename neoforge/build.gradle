@@ -36,7 +36,9 @@ dependencies {
 // Compile common sources directly with official (patched) mappings (single remap pass)
 tasks.named('compileJava', JavaCompile) {
 	dependsOn(configurations.commonJava)
-	source(configurations.commonJava)
+	def commonSrcDir = configurations.commonJava.singleFile
+	// patchマッピングにsendPacket対応が無いため、実行時名を直接指定した差し替え版を使う
+	source(files(commonSrcDir).asFileTree.matching { exclude '**/mixin/MixinClientPlayerInteractionManager.java' })
 }
 
 base {
