@@ -1,0 +1,96 @@
+plugins {
+	id 'dev.architectury.loom'
+	id 'maven-publish'
+}
+
+repositories {
+	maven { url = 'https://maven.minecraftforge.net/' }
+	maven { url = 'https://libraries.minecraft.net/' }
+}
+
+configurations {
+	commonJava {
+		canBeResolved = true
+	}
+	commonResources {
+		canBeResolved = true
+	}
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	mappings "net.fabricmc:yarn:${project.mappings_version}:v2"
+	forge "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+
+	implementation "com.google.code.findbugs:jsr305:3.0.2"
+	compileOnly "org.jetbrains:annotations:24.1.0"
+
+	modImplementation files("${rootProject.projectDir}/libs/${project.malilib_forge_file}")
+
+	commonJava project(path: ':common', configuration: 'commonJava')
+	commonResources project(path: ':common', configuration: 'commonResources')
+}
+
+// Compile common sources directly with Yarn mappings - loom reobfuscates to SRG for production
+tasks.named('compileJava', JavaCompile) {
+	dependsOn(configurations.commonJava)
+	source(configurations.commonJava)
+}
+
+base {
+	group = project.group + "." + project.mod_id
+	archivesName = "itemscroller-forge-${project.minecraft_version_out}"
+	version = project.mod_version
+	if (version.endsWith('-dev')) {
+		version += "." + new Date().format('yyyyMMdd.HHmmss')
+	}
+}
+
+loom {
+	forge {
+		mixinConfigs = [
+			"mixins.itemscroller.json"
+		]
+	}
+	mixin {
+		useLegacyMixinAp = true
+		defaultRefmapName.set("itemscroller.refmap.json")
+	}
+}
+
+processResources {
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+	from(configurations.commonResources) {
+		exclude '**/*.xcf'
+		exclude '**/xcf'
+	}
+	inputs.property "mod_version", project.mod_version
+	filesMatching("META-INF/mods.toml") {
+		expand "version": project.version
+	}
+}
+
+java {
+	withSourcesJar()
+}
+
+jar {
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+	from(rootProject.file("LICENSE.txt")) {
+		rename { "${it}_${base.archivesName}" }
+	}
+}
+
+publishing {
+	publications {
+		mavenJava(MavenPublication) {
+			artifactId = base.archivesName.get()
+			from components.java
+		}
+	}
+	repositories {
+		maven {
+			url = "${rootProject.projectDir}/CommonMaven"
+		}
+	}
+}

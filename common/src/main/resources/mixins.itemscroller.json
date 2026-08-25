@@ -3,6 +3,7 @@
 	"package": "fi.dy.masa.itemscroller.mixin",
 	"compatibilityLevel": "JAVA_17",
 	"minVersion": "0.8",
+	"refmap": "itemscroller.refmap.json",
 	"client": [
 		"IMixinCraftingResultSlot",
 		"IMixinMerchantScreen",
