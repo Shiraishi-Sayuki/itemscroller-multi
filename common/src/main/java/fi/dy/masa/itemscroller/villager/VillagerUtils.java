@@ -1,5 +1,6 @@
 package fi.dy.masa.itemscroller.villager;
 
+import fi.dy.masa.itemscroller.util.PacketUtils;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -34,7 +35,7 @@ public class VillagerUtils
                 handler.switchTo(visibleIndex);
 
                 // Use the real (server-side) index
-                MinecraftClient.getInstance().getNetworkHandler().sendPacket(new SelectMerchantTradeC2SPacket(realIndex));
+                PacketUtils.sendPacket(MinecraftClient.getInstance().getNetworkHandler(), new SelectMerchantTradeC2SPacket(realIndex));
 
                 return true;
             }

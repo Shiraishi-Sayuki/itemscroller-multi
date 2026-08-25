@@ -12,6 +12,7 @@ import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.client.network.ClientPlayerInteractionManager;
 import net.minecraft.network.packet.Packet;
 import fi.dy.masa.itemscroller.util.ClickPacketBuffer;
+import fi.dy.masa.itemscroller.util.PacketUtils;
 
 @Mixin(ClientPlayerInteractionManager.class)
 public class MixinClientPlayerInteractionManager
@@ -44,6 +45,6 @@ public class MixinClientPlayerInteractionManager
             return;
         }
 
-        netHandler.sendPacket(packet);
+        PacketUtils.sendPacket(netHandler, packet);
     }
 }

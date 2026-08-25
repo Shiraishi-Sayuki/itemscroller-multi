@@ -2758,7 +2758,7 @@ public class InventoryUtils
         {
             ClientStatusC2SPacket packet = new ClientStatusC2SPacket(ClientStatusC2SPacket.Mode.REQUEST_STATS);
 
-            mc.getNetworkHandler().sendPacket(packet);
+            PacketUtils.sendPacket(mc.getNetworkHandler(), packet);
             selectedSlotUpdateTask = () -> trySort(gui, range.first(), range.second(), shulkerBoxFix, swapSlot);
         }
         else

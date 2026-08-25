@@ -1,0 +1,94 @@
+plugins {
+	id 'dev.architectury.loom'
+	id 'maven-publish'
+}
+
+repositories {
+	maven {
+		url = 'https://maven.terraformersmc.com/releases/'
+		content { includeGroupAndSubgroups("com.terraformersmc") }
+	}
+}
+
+configurations {
+	commonJava {
+		canBeResolved = true
+	}
+	commonResources {
+		canBeResolved = true
+	}
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	mappings "net.fabricmc:yarn:${project.mappings_version}:v2"
+	modImplementation "net.fabricmc:fabric-loader:${project.fabric_loader_version}"
+	implementation "com.google.code.findbugs:jsr305:3.0.2"
+
+	modImplementation files("${rootProject.projectDir}/libs/${project.malilib_fabric_file}")
+	modImplementation(fabricApi.module("fabric-networking-api-v1", "0.102.0+1.21"))
+	modCompileOnly "com.terraformersmc:modmenu:${project.mod_menu_version}"
+
+	commonJava project(path: ':common', configuration: 'commonJava')
+	commonResources project(path: ':common', configuration: 'commonResources')
+}
+
+// Compile common sources directly with Fabric mappings (single remap pass)
+tasks.named('compileJava', JavaCompile) {
+	dependsOn(configurations.commonJava)
+	source(configurations.commonJava)
+}
+
+base {
+	group = project.group + "." + project.mod_id
+	archivesName = "itemscroller-fabric-${project.minecraft_version_out}"
+	version = project.mod_version
+	if (version.endsWith('-dev')) {
+		version += "." + new Date().format('yyyyMMdd.HHmmss')
+	}
+}
+
+loom {
+	accessWidenerPath = file("src/main/resources/itemscroller.accesswidener")
+	mixin {
+		useLegacyMixinAp = true
+		defaultRefmapName.set("itemscroller.refmap.json")
+	}
+}
+
+processResources {
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+	from(configurations.commonResources) {
+		exclude '**/*.xcf'
+		exclude '**/xcf'
+	}
+	inputs.property "mod_version", project.mod_version
+	filesMatching("fabric.mod.json") {
+		expand "mod_version": project.mod_version
+	}
+}
+
+java {
+	withSourcesJar()
+}
+
+jar {
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+	from(rootProject.file("LICENSE.txt")) {
+		rename { "${it}_${base.archivesName}" }
+	}
+}
+
+publishing {
+	publications {
+		mavenJava(MavenPublication) {
+			artifactId = base.archivesName.get()
+			from components.java
+		}
+	}
+	repositories {
+		maven {
+			url = "${rootProject.projectDir}/CommonMaven"
+		}
+	}
+}
