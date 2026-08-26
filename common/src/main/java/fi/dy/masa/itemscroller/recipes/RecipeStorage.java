@@ -8,7 +8,6 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
-import net.minecraft.nbt.NbtSizeTracker;
 import net.minecraft.registry.DynamicRegistryManager;
 import net.minecraft.screen.slot.Slot;
 
@@ -283,7 +282,7 @@ public class RecipeStorage
 
                 if (Files.exists(file))
                 {
-                    NbtCompound nbtIn = NbtUtils.readNbtFromFileAsPath(file, NbtSizeTracker.ofUnlimitedBytes());
+                    NbtCompound nbtIn = NbtUtils.readNbtFromFileAsPath(file);
 
                     if (nbtIn != null && !nbtIn.isEmpty())
                     {

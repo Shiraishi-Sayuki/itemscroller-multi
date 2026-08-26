@@ -163,7 +163,8 @@ public class Configs implements IConfigHandler
         }
         else
         {
-            ItemScroller.LOGGER.error("loadFromFile(): Failed to load config file '{}'.", configFile.toAbsolutePath());
+            // 初回起動時はファイルが無いだけなのでinfo扱い
+            ItemScroller.LOGGER.info("loadFromFile(): No config file yet '{}', using defaults.", configFile.toAbsolutePath());
         }
 
         CraftingHandler.clearDefinitions();

@@ -21,4 +21,4 @@ pluginManagement {
 rootProject.name = 'itemscroller-multiloader'
 include('common')
 include('fabric')
-include('neoforge')
+include('forge')

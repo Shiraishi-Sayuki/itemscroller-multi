@@ -3,7 +3,7 @@ package fi.dy.masa.itemscroller.mixin.recipe;
 import fi.dy.masa.itemscroller.util.InventoryUtils;
 import net.minecraft.client.gui.screen.recipebook.RecipeBookGhostSlots;
 import net.minecraft.client.gui.screen.recipebook.RecipeBookWidget;
-import net.minecraft.recipe.RecipeEntry;
+import net.minecraft.recipe.Recipe;
 import net.minecraft.screen.slot.Slot;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -43,7 +43,7 @@ public class MixinRecipeBookWidget
             at = @At("HEAD"),
             cancellable = true
     )
-    private void onShowGhostRecipe(RecipeEntry<?> recipe, List<Slot> slots, CallbackInfo ci) {
+    private void onShowGhostRecipe(Recipe<?> recipe, List<Slot> slots, CallbackInfo ci) {
         if (this.ghostSlots.getRecipe() == recipe) {
             ci.cancel();
         }

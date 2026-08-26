@@ -9,13 +9,15 @@ import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
+import net.minecraft.inventory.CraftingInventory;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.ItemStack;
 import net.minecraft.recipe.CraftingRecipe;
 import net.minecraft.recipe.Recipe;
-import net.minecraft.recipe.RecipeEntry;
 import net.minecraft.recipe.RecipeType;
-import net.minecraft.recipe.input.CraftingRecipeInput;
-import net.minecraft.recipe.input.RecipeInput;
 import net.minecraft.registry.DynamicRegistryManager;
+import net.minecraft.screen.ScreenHandler;
+import net.minecraft.screen.ScreenHandlerType;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
 import fi.dy.masa.itemscroller.recipes.CraftingHandler.SlotRange;
@@ -27,7 +29,7 @@ public class RecipePattern
 {
     private ItemStack result = InventoryUtils.EMPTY_STACK;
     private ItemStack[] recipe = new ItemStack[9];
-    private RecipeEntry<?> vanillaRecipe;
+    @Nullable private CraftingRecipe vanillaRecipe;
 
     public RecipePattern()
     {
@@ -55,10 +57,10 @@ public class RecipePattern
         this.clearRecipe();
     }
 
-    @SuppressWarnings("unchecked")
     @Nullable
-    public <T extends RecipeInput> Recipe<T> lookupVanillaRecipe(World world) {
+    public CraftingRecipe lookupVanillaRecipe(World world) {
         //Assume all recipes here are of type CraftingRecipe
+        // 1.20.1にはCraftingRecipeInputが無いのでダミーのCraftingInventoryを組んで照合する
         this.vanillaRecipe = null;
         var mc = MinecraftClient.getInstance();
         int recipeSize;
@@ -75,12 +77,33 @@ public class RecipePattern
             return null;
         }
 
-        for (RecipeEntry<CraftingRecipe> match : mc.world.getRecipeManager().getAllMatches(RecipeType.CRAFTING, CraftingRecipeInput.create(recipeSize, recipeSize, Arrays.asList(recipe)), world))
+        CraftingInventory inv = new CraftingInventory(new ScreenHandler((ScreenHandlerType<?>) null, 0)
         {
-            if (InventoryUtils.areStacksEqual(result, match.value().getResult(world.getRegistryManager())))
+            @Override
+            public ItemStack quickMove(PlayerEntity player, int slot)
+            {
+                return ItemStack.EMPTY;
+            }
+
+            @Override
+            public boolean canUse(PlayerEntity player)
+            {
+                return true;
+            }
+        }, recipeSize, recipeSize);
+
+        for (int i = 0; i < Math.min(recipeSize * recipeSize, this.recipe.length); ++i)
+        {
+            inv.setStack(i, this.recipe[i]);
+        }
+
+        for (CraftingRecipe match : mc.world.getRecipeManager().getAllMatches(RecipeType.CRAFTING, inv, world))
+        {
+            // 1.20.1ではgetOutput(registryManager)
+            if (InventoryUtils.areStacksEqual(this.result, match.getOutput(world.getRegistryManager())))
             {
                 this.vanillaRecipe = match;
-                return (Recipe<T>) match.value();
+                return match;
             }
         }
         return null;
@@ -151,11 +174,11 @@ public class RecipePattern
 
                 if (slot >= 0 && slot < this.recipe.length)
                 {
-                    this.recipe[slot] = ItemStack.fromNbtOrEmpty(registryManager, tag);
+                    this.recipe[slot] = ItemStack.fromNbt(tag);
                 }
             }
 
-            this.result = ItemStack.fromNbtOrEmpty(registryManager, nbt.getCompound("Result"));
+            this.result = ItemStack.fromNbt(nbt.getCompound("Result"));
         }
     }
 
@@ -166,7 +189,7 @@ public class RecipePattern
 
         if (this.isValid())
         {
-            NbtCompound tag = (NbtCompound) this.result.encode(registryManager);
+            NbtCompound tag = this.result.writeNbt(new NbtCompound());
 
             nbt.putInt("Length", this.recipe.length);
             nbt.put("Result", tag);
@@ -178,7 +201,7 @@ public class RecipePattern
                 if (this.recipe[i].isEmpty() == false && InventoryUtils.isStackEmpty(this.recipe[i]) == false)
                 {
                     tag = new NbtCompound();
-                    tag.copyFrom((NbtCompound) this.recipe[i].encode(registryManager));
+                    tag.copyFrom(this.recipe[i].writeNbt(new NbtCompound()));
 
                     tag.putInt("Slot", i);
                     tagIngredients.add(tag);
@@ -249,25 +272,19 @@ public class RecipePattern
     }
 
     @Nullable
-    public RecipeEntry<?> getVanillaRecipeEntry()
+    public Recipe<?> getVanillaRecipeEntry()
     {
         return this.vanillaRecipe;
     }
 
-    @SuppressWarnings("unchecked")
     @Nullable
-    public <T extends RecipeInput> Recipe<T> getVanillaRecipe()
+    public CraftingRecipe getVanillaRecipe()
     {
         if (this.recipe == null)
         {
             return null;
         }
 
-        if (this.vanillaRecipe != null)
-        {
-            return (Recipe<T>) this.vanillaRecipe.value();
-        }
-
-        return null;
+        return this.vanillaRecipe;
     }
 }

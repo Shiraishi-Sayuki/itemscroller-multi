@@ -241,53 +241,36 @@ public class KeybindCallbacks implements IHotkeyCallback, IClientTickHandler
 
                 if (Configs.Generic.MASS_CRAFT_RECIPE_BOOK.getBooleanValue() && recipe.lookupVanillaRecipe(mc.world) != null)
                 {
+                    // 1.20.1 - clickRecipeはサーバーが材料を並べるだけでクライアント側の
+                    // 同期が追いつかないため、masaの旧来実装(自前でグリッドを満たし
+                    // ローカル再計算する方式)に統一する
                     InventoryUtils.dontUpdateRecipeBook = 2;
-                    for (int i = 0; i < limit; ++i)
+
+                    int failsafe = 0;
+
+                    while (++failsafe < limit)
                     {
-                        // todo
-                        //InventoryUtils.setInhibitCraftingOutputUpdate(true);
-                        //InventoryUtils.tryClearCursor(gui);
-                        //InventoryUtils.throwAllCraftingResultsToGround(recipe, gui);
+                        InventoryUtils.tryClearCursor(gui);
+                        InventoryUtils.setInhibitCraftingOutputUpdate(true);
+                        InventoryUtils.throwAllCraftingResultsToGround(recipe, gui);
+                        InventoryUtils.throwAllNonRecipeItemsToGround(recipe, gui);
+                        InventoryUtils.tryMoveItemsToFirstCraftingGrid(recipe, gui, true);
+                        InventoryUtils.setInhibitCraftingOutputUpdate(false);
+                        InventoryUtils.updateCraftingOutputSlot(outputSlot);
 
-                        RecipeInputInventory craftingInv = ((IMixinCraftingResultSlot) outputSlot).itemscroller_getCraftingInventory();
-                        if (!recipe.getVanillaRecipe().matches(craftingInv.createRecipeInput(), mc.world))
-                        {
-                            CraftingHandler.SlotRange range = CraftingHandler.getCraftingGridSlots(gui, outputSlot);
-                            final int invSlots = gui.getScreenHandler().slots.size();
-                            final int rangeSlots = range.getSlotCount();
-
-                            for (int j = 0, slotNum = range.getFirst(); j < rangeSlots && slotNum < invSlots; j++, slotNum++)
-                            {
-                                InventoryUtils.shiftClickSlot(gui, slotNum);
-
-                                Slot slotTmp = gui.getScreenHandler().getSlot(slotNum);
-                                ItemStack stack = slotTmp.getStack();
-                                if (!stack.isEmpty())
-                                {
-                                    InventoryUtils.dropStack(gui, slotNum);
-                                }
-                            }
-                        }
-
-                        mc.interactionManager.clickRecipe(gui.getScreenHandler().syncId, recipe.getVanillaRecipeEntry(), true);
-//                        InventoryUtils.setInhibitCraftingOutputUpdate(false);
-//                        InventoryUtils.updateCraftingOutputSlot(outputSlot);
-
-                        craftingInv = ((IMixinCraftingResultSlot) outputSlot).itemscroller_getCraftingInventory();
-                        if (recipe.getVanillaRecipe().matches(craftingInv.createRecipeInput(), mc.world))
+                        if (InventoryUtils.areStacksEqual(outputSlot.getStack(), recipe.getResult()) == false)
                         {
                             break;
                         }
 
-                        InventoryUtils.shiftClickSlot(gui, outputSlot.id);
-
-                        // This isn't required after 1.21, it only needs a single dropStack
-                        for (int k = 0; k < recipe.getResult().getMaxCount(); k++)
+                        if (Configs.Generic.CARPET_CTRL_Q_CRAFTING.getBooleanValue())
                         {
                             InventoryUtils.dropStack(gui, outputSlot.id);
                         }
-
-                        recipeBookClicks = true;
+                        else
+                        {
+                            InventoryUtils.dropStacksWhileHasItem(gui, outputSlot.id, recipe.getResult());
+                        }
                     }
 
                     InventoryUtils.tryClearCursor(gui);

@@ -11,7 +11,6 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.CraftingResultInventory;
 import net.minecraft.inventory.RecipeInputInventory;
 import net.minecraft.recipe.CraftingRecipe;
-import net.minecraft.recipe.RecipeEntry;
 import net.minecraft.screen.CraftingScreenHandler;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.world.World;
@@ -39,8 +38,7 @@ public abstract class MixinCraftingScreenHandler
             World world,
             PlayerEntity player,
             RecipeInputInventory craftingInventory,
-            CraftingResultInventory resultInv,
-            RecipeEntry<CraftingRecipe> recipeEntry, CallbackInfo ci)
+            CraftingResultInventory resultInv, CallbackInfo ci)
     {
         if (MinecraftClient.getInstance().isOnThread())
         {

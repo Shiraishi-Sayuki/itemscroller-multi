@@ -64,8 +64,9 @@ public abstract class MixinMerchantScreen extends HandledScreen<MerchantScreenHa
         }
     }
 
+    // 1.20.1ではmouseScrolledの引数が3つ(横スクロール分離は1.21から)
     @Inject(method = "mouseScrolled", at = @At("RETURN"))
-    private void onMouseScrollPost(double mouseX, double mouseY, double horizontalAmount, double verticalAmount, CallbackInfoReturnable<Boolean> cir)
+    private void onMouseScrollPost(double mouseX, double mouseY, double amount, CallbackInfoReturnable<Boolean> cir)
     {
         if (Configs.Toggles.VILLAGER_TRADE_FEATURES.getBooleanValue() &&
             Configs.Generic.VILLAGER_TRADE_LIST_REMEMBER_SCROLL.getBooleanValue() &&

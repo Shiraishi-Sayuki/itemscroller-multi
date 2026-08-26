@@ -25,7 +25,7 @@ public record ItemType(ItemStack stack)
         int result = 1;
         //result = prime * result + ((stack == null) ? 0 : stack.hashCode());
         result = prime * result + this.stack.getItem().hashCode();
-        result = prime * result + (this.stack.getComponents() != null ? this.stack.getComponents().hashCode() : 0);
+        result = prime * result + (this.stack.getNbt() != null ? this.stack.getNbt().hashCode() : 0);
         return result;
     }
 
@@ -41,7 +41,7 @@ public record ItemType(ItemStack stack)
 
         ItemType other = (ItemType) obj;
 
-        return ItemStack.areItemsAndComponentsEqual(this.stack, other.stack);
+        return ItemStack.areEqual(this.stack, other.stack);
     }
 
     /**

@@ -13,17 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(ItemStack.class)
 public class MixinItemStack
 {
-    @Inject(method = "capCount", at = @At("HEAD"), cancellable = true)
-    private void dontCap(int maxCount, CallbackInfo ci)
-    {
-        // Client-side fx for empty shulker box stacking
-        if (MinecraftClient.getInstance().isOnThread() &&
-            Configs.Generic.SORT_INVENTORY_TOGGLE.getBooleanValue() &&
-            Configs.Generic.SORT_ASSUME_EMPTY_BOX_STACKS.getBooleanValue())
-        {
-            ci.cancel();
-        }
-    }
+    // 1.21のcapCountは1.20.1に存在しないのでdontCap注入は削除
 
     @Inject(method = "getMaxCount", at = @At("HEAD"), cancellable = true)
     private void getMaxCount(CallbackInfoReturnable<Integer> cir)

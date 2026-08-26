@@ -11,7 +11,6 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntComparator;
 
 import it.unimi.dsi.fastutil.ints.IntIntMutablePair;
-import org.apache.commons.lang3.math.Fraction;
 
 import net.minecraft.block.ShulkerBoxBlock;
 import net.minecraft.client.MinecraftClient;
@@ -19,9 +18,6 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.*;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.world.ClientWorld;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.BundleContentsComponent;
-import net.minecraft.component.type.ContainerComponent;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.CraftingResultInventory;
@@ -33,9 +29,8 @@ import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.c2s.play.ClientStatusC2SPacket;
 import net.minecraft.network.packet.s2c.play.StatisticsS2CPacket;
 import net.minecraft.recipe.CraftingRecipe;
-import net.minecraft.recipe.RecipeEntry;
+import net.minecraft.recipe.Recipe;
 import net.minecraft.recipe.RecipeType;
-import net.minecraft.recipe.input.CraftingRecipeInput;
 import net.minecraft.registry.Registries;
 import net.minecraft.screen.MerchantScreenHandler;
 import net.minecraft.screen.ScreenHandler;
@@ -136,24 +131,22 @@ public class InventoryUtils
         {
             ItemStack stack = ItemStack.EMPTY;
             CraftingRecipe recipe = Configs.Generic.USE_RECIPE_CACHING.getBooleanValue() ? lastRecipe : null;
-            RecipeEntry<?> recipeEntry = null;
-            CraftingRecipeInput recipeInput = craftMatrix.createRecipeInput();
 
-            if (recipe == null || recipe.matches(recipeInput, world) == false)
+            // 1.20.1ではレシピ照合にInventoryを直接渡す(RecipeInputは1.20.5+)
+            if (recipe == null || recipe.matches(craftMatrix, world) == false)
             {
-                Optional<RecipeEntry<CraftingRecipe>> optional = world.getRecipeManager().getFirstMatch(RecipeType.CRAFTING, recipeInput, world);
-                recipe = optional.map(RecipeEntry::value).orElse(null);
-                recipeEntry = optional.orElse(null);
+                Optional<CraftingRecipe> optional = world.getRecipeManager().getFirstMatch(RecipeType.CRAFTING, craftMatrix, world);
+                recipe = optional.orElse(null);
             }
 
             if (recipe != null)
             {
                 if ((recipe.isIgnoredInRecipeBook() ||
                      world.getGameRules().getBoolean(GameRules.DO_LIMITED_CRAFTING) == false ||
-                     ((ClientPlayerEntity) player).getRecipeBook().contains(recipeEntry)))
+                     ((ClientPlayerEntity) player).getRecipeBook().contains(recipe)))
                 {
-                    inventoryCraftResult.setLastRecipe(recipeEntry);
-                    stack = recipe.craft(recipeInput, world.getRegistryManager());
+                    inventoryCraftResult.setLastRecipe(recipe);
+                    stack = recipe.craft(craftMatrix, world.getRegistryManager());
                 }
 
                 if (setEmptyStack || stack.isEmpty() == false)
@@ -174,7 +167,7 @@ public class InventoryUtils
             Identifier rl = Registries.ITEM.getId(stack.getItem());
             String idStr = rl != null ? rl.toString() : "null";
             String displayName = stack.getName().getString();
-            String nbtStr = stack.getComponents() != null ? stack.getComponents().toString() : "<no NBT>";
+            String nbtStr = stack.getNbt() != null ? stack.getNbt().toString() : "<no NBT>";
 
             return String.format("[%s - display: %s - NBT: %s] (%s)", idStr, displayName, nbtStr, stack);
         }
@@ -1146,8 +1139,8 @@ public class InventoryUtils
             return;
         }
 
-        ItemStack buy1 = recipe.getDisplayedFirstBuyItem();
-        ItemStack buy2 = recipe.getDisplayedSecondBuyItem();
+        ItemStack buy1 = recipe.getAdjustedFirstBuyItem();
+        ItemStack buy2 = recipe.getSecondBuyItem();
 
         if (isStackEmpty(buy1) == false)
         {
@@ -1658,9 +1651,12 @@ public class InventoryUtils
     public static void throwAllCraftingResultsToGround(RecipePattern recipe,
                                                        HandledScreen<? extends ScreenHandler> gui)
     {
+        // FIXME - areStacksEqualがスタック数も一致判定に含むため、インベントリ内の
+        // スタックサイズが違うと1件もマッチしない(デバッグでmatchingSlots=0を確認済み)。
+        // アイテム+NBT一致・数は無視の比較に変えるべき
         Slot slot = CraftingHandler.getFirstCraftingOutputSlotForGui(gui);
 
-        if (slot != null && isStackEmpty(recipe.getResult()) == false)
+        if (slot != null && recipe != null && isStackEmpty(recipe.getResult()) == false)
         {
             dropStacks(gui, recipe.getResult(), slot, false);
         }
@@ -2118,7 +2114,7 @@ public class InventoryUtils
 
     public static boolean areStacksEqual(ItemStack stack1, ItemStack stack2)
     {
-        return ItemStack.areItemsAndComponentsEqual(stack1, stack2);
+        return ItemStack.areEqual(stack1, stack2);
     }
 
     private static boolean areSlotsInSameInventory(Slot slot1, Slot slot2)
@@ -2943,23 +2939,22 @@ public class InventoryUtils
         // sort by shulker box contents
         if (stack1IsBox && stack2IsBox)
         {
-            List<ItemStack> contents1 = stack1.getOrDefault(DataComponentTypes.CONTAINER, ContainerComponent.DEFAULT).streamNonEmpty().toList();
-            List<ItemStack> contents2 = stack2.getOrDefault(DataComponentTypes.CONTAINER, ContainerComponent.DEFAULT).streamNonEmpty().toList();
             int flip = (Configs.Generic.SORT_SHULKER_BOXES_INVERTED.getBooleanValue() ? -1 : 1);
 
-            return Integer.compare(contents1.size(), contents2.size()) * flip;
+            // 1.20.1ではコンテナ内容はBlockEntityTagのItemsリストに入る
+            return Integer.compare(countNonEmptyContainerItems(stack1), countNonEmptyContainerItems(stack2)) * flip;
         }
 
         // sort by bundle contents
         if (stack1IsBundle && stack2IsBundle)
         {
-            BundleContentsComponent bundle1 = stack1.getOrDefault(DataComponentTypes.BUNDLE_CONTENTS, BundleContentsComponent.DEFAULT);
-            BundleContentsComponent bundle2 = stack2.getOrDefault(DataComponentTypes.BUNDLE_CONTENTS, BundleContentsComponent.DEFAULT);
             int flip = (Configs.Generic.SORT_BUNDLES_INVERTED.getBooleanValue() ? -1 : 1);
-            Fraction occupancy1 = bundle1.getOccupancy();
-            Fraction occupancy2 = bundle2.getOccupancy();
 
-            return occupancy1.compareTo(occupancy2) * flip;
+            // 1.20.1のBundleItemには占有率取得がある
+            float occupancy1 = ((BundleItem) stack1.getItem()).getAmountFilled(stack1);
+            float occupancy2 = ((BundleItem) stack2.getItem()).getAmountFilled(stack2);
+
+            return Float.compare(occupancy1, occupancy2) * flip;
         }
 
         SortingMethod method = (SortingMethod) Configs.Generic.SORT_METHOD_DEFAULT.getOptionListValue();
@@ -3035,7 +3030,8 @@ public class InventoryUtils
         if (areStacksEqual(stack1, stack2) == false)
         {
             // Sort's Data Components by Hash Code
-            return Integer.compare(stack1.getComponents().hashCode(), stack2.getComponents().hashCode());
+            return Integer.compare(stack1.getNbt() != null ? stack1.getNbt().hashCode() : 0,
+                                   stack2.getNbt() != null ? stack2.getNbt().hashCode() : 0);
         }
 
         return Integer.compare(stack2.getCount(), stack1.getCount());
@@ -3101,6 +3097,59 @@ public class InventoryUtils
         return false;
     }
 
+    // 1.20.1用 - コンテナ系アイテムの中身はNBT(BlockEntityTag.Items / Items)から読む
+    private static int countBundleItems(ItemStack stack)
+    {
+        net.minecraft.nbt.NbtCompound root = stack.getNbt();
+
+        if (root == null || root.contains("Items", net.minecraft.nbt.NbtElement.LIST_TYPE) == false)
+        {
+            return 0;
+        }
+
+        net.minecraft.nbt.NbtList list = root.getList("Items", net.minecraft.nbt.NbtElement.COMPOUND_TYPE);
+
+        int count = 0;
+
+        for (int i = 0; i < list.size(); ++i)
+        {
+            net.minecraft.nbt.NbtCompound entry = list.getCompound(i);
+
+            if (entry.contains("id") && "minecraft:air".equals(entry.getString("id")) == false)
+            {
+                count += entry.getByte("Count") & 0xFF;
+            }
+        }
+
+        return count;
+    }
+
+    private static int countNonEmptyContainerItems(ItemStack stack)
+    {
+        net.minecraft.nbt.NbtCompound beTag = stack.getSubNbt("BlockEntityTag");
+
+        if (beTag == null || beTag.contains("Items", net.minecraft.nbt.NbtElement.LIST_TYPE) == false)
+        {
+            return 0;
+        }
+
+        net.minecraft.nbt.NbtList list = beTag.getList("Items", net.minecraft.nbt.NbtElement.COMPOUND_TYPE);
+
+        int count = 0;
+
+        for (int i = 0; i < list.size(); ++i)
+        {
+            net.minecraft.nbt.NbtCompound entry = list.getCompound(i);
+
+            if (entry.contains("id") && "minecraft:air".equals(entry.getString("id")) == false)
+            {
+                count += entry.getByte("Count") & 0xFF;
+            }
+        }
+
+        return count;
+    }
+
     private static boolean isShulkerBox(ItemStack stack)
     {
         return stack.getItem() instanceof BlockItem bi && bi.getBlock() instanceof ShulkerBoxBlock;
@@ -3108,17 +3157,20 @@ public class InventoryUtils
 
     private static boolean isEmptyShulkerBox(ItemStack stack)
     {
-        return isShulkerBox(stack) && stack.getOrDefault(DataComponentTypes.CONTAINER, ContainerComponent.DEFAULT).streamNonEmpty().findAny().isEmpty();
+        // 1.20.1 - BlockEntityTagのItemsが空(または全部空スタック)なら空とみなす
+        return isShulkerBox(stack) && countNonEmptyContainerItems(stack) == 0;
     }
 
     private static boolean isBundle(ItemStack stack)
     {
-        return stack.isOf(Items.BUNDLE) || stack.getComponents().contains(DataComponentTypes.BUNDLE_CONTENTS);
+        // 1.20.1のバンドルはNBTのItemsで内容を持つ
+        return stack.isOf(Items.BUNDLE) || (stack.getItem() instanceof BundleItem);
     }
 
     private static boolean isEmptyBundle(ItemStack stack)
     {
-        return isBundle(stack) && fi.dy.masa.malilib.util.InventoryUtils.bundleCountItems(stack) < 1;
+        // 1.20.1のバンドルはNBTのItemsで内容を持つ
+        return isBundle(stack) && countBundleItems(stack) < 1;
     }
 
     public static int stackMaxSize(ItemStack stack, boolean assumeShulkerStacking)
@@ -3136,7 +3188,7 @@ public class InventoryUtils
             }
         }
 
-        return stack.getOrDefault(DataComponentTypes.MAX_STACK_SIZE, 1);
+        return stack.getMaxCount();
     }
 
     /**

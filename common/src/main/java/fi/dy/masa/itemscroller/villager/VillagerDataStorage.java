@@ -8,7 +8,6 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
-import net.minecraft.nbt.NbtSizeTracker;
 import net.minecraft.screen.MerchantScreenHandler;
 import net.minecraft.village.TradeOffer;
 import net.minecraft.village.TradeOfferList;
@@ -214,7 +213,7 @@ public class VillagerDataStorage
 
                 if (Files.exists(file))
                 {
-                    NbtCompound nbtIn = NbtUtils.readNbtFromFileAsPath(file, NbtSizeTracker.ofUnlimitedBytes());
+                    NbtCompound nbtIn = NbtUtils.readNbtFromFileAsPath(file);
 
                     if (nbtIn != null && !nbtIn.isEmpty())
                     {

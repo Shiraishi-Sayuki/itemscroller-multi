@@ -1,14 +1,15 @@
 package fi.dy.masa.itemscroller.util;
 
+import fi.dy.masa.itemscroller.ItemScroller;
 import javax.annotation.Nullable;
+import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.network.packet.Packet;
 
-import fi.dy.masa.itemscroller.ItemScroller;
-
-// パケット送信ヘルパー - YarnとMojMapでメソッド名が違う(sendPacket/send)のでリフレクションで両対応する
+// パケット送信ヘルパー - ビルド時のリマップで両ローダー対応するので直接呼びでよい
+// (旧NeoForge用のリフレクションは1.20.1では不要かつSRG環境で失敗する)
 public class PacketUtils
 {
-    public static boolean sendPacket(@Nullable Object networkHandler, Packet<?> packet)
+    public static boolean sendPacket(@Nullable ClientPlayNetworkHandler networkHandler, Packet<?> packet)
     {
         if (networkHandler == null)
         {
@@ -17,22 +18,8 @@ public class PacketUtils
 
         try
         {
-            java.lang.reflect.Method method = networkHandler.getClass().getMethod("sendPacket", Packet.class);
-            method.invoke(networkHandler, packet);
+            networkHandler.sendPacket(packet);
             return true;
-        }
-        catch (NoSuchMethodException e)
-        {
-            try
-            {
-                java.lang.reflect.Method method = networkHandler.getClass().getMethod("send", Packet.class);
-                method.invoke(networkHandler, packet);
-                return true;
-            }
-            catch (Exception e2)
-            {
-                ItemScroller.LOGGER.warn("PacketUtils#sendPacket: failed to send packet [{}]", packet.getClass().getName(), e2);
-            }
         }
         catch (Exception e)
         {
