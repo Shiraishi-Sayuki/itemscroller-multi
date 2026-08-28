@@ -1,0 +1,110 @@
+plugins {
+	id 'net.neoforged.moddev'
+	id 'maven-publish'
+}
+
+repositories {
+	maven { url = 'https://libraries.minecraft.net' }
+	maven { url = 'https://maven.neoforged.net/releases' }
+	maven { url = 'https://maven.architectury.dev/' }
+	maven { url = 'https://maven.terraformersmc.com/releases/'
+		content { includeGroupAndSubgroups("com.terraformersmc") }
+	}
+}
+
+configurations {
+	commonJava {
+		canBeResolved = true
+	}
+}
+
+neoForge {
+	enable {
+		version = project.neoforge_version
+		disableRecompilation = true
+	}
+
+	accessTransformers.from file("src/main/resources/META-INF/accesstransformer.cfg")
+
+	mods {
+		itemscroller {
+			sourceSet sourceSets.main
+		}
+	}
+}
+
+dependencies {
+	implementation "com.google.code.findbugs:jsr305:3.0.2"
+	compileOnly "org.jetbrains:annotations:24.1.0"
+
+	implementation files("${rootProject.projectDir}/libs/${project.malilib_neoforge_file}")
+	implementation project(path: ':common', configuration: 'commonJar')
+
+	commonJava project(path: ':common', configuration: 'commonJava')
+}
+
+// patchマッピングにsendPacket対応が無いため、実行時名を直接指定した差し替え版を使う
+tasks.named('compileJava', JavaCompile) {
+	dependsOn(configurations.commonJava)
+	def commonSrcDir = configurations.commonJava.singleFile
+	source(files(commonSrcDir).asFileTree.matching { exclude '**/mixin/network/MixinClientPlayerInteractionManager.java' })
+}
+
+base {
+	archivesName = "itemscroller-neoforge-${project.minecraft_version_out}"
+	group = project.group + "." + project.mod_id
+	version = project.mod_version
+	if (version.endsWith('-dev')) {
+		version += "." + new Date().format('yyyyMMdd.HHmmss')
+	}
+}
+
+processResources {
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+	inputs.property "mod_version", project.mod_version
+	filesMatching("META-INF/neoforge.mods.toml") {
+		expand "mod_version": project.mod_version
+	}
+}
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(25)
+	}
+	withSourcesJar()
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.encoding = "UTF-8"
+	it.options.release = 25
+}
+
+jar {
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+	from(rootProject.file("LICENSE.txt")) {
+		rename { "${it}_${base.archivesName}"}
+	}
+	// Include common module classes and resources, excluding common's MixinClientPlayerInteractionManager
+	// (neoforge has its own version with @Redirect instead of @WrapOperation)
+	from(project(':common').sourceSets.main.output.classesDirs) {
+		exclude '**/mixin/network/MixinClientPlayerInteractionManager.class'
+	}
+	from(project(':common').sourceSets.main.resources) {
+		exclude "fabric.mod.json"
+		exclude "itemscroller.accesswidener"
+	}
+}
+
+publishing {
+	publications {
+		mavenJava(MavenPublication) {
+			artifactId = base.archivesName.get()
+			from components.java
+		}
+	}
+	repositories {
+		maven {
+			url = "${rootProject.projectDir}/CommonMaven"
+		}
+	}
+}

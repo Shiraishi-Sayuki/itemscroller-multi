@@ -1,0 +1,30 @@
+{
+    "required": true,
+    "package": "fi.dy.masa.itemscroller.mixin",
+    "compatibilityLevel": "JAVA_21",
+    "minVersion": "0.8",
+    "mixins": [
+        "hud.MixinEffectsInInventory",
+        "item.IMixinItemInstance",
+        "item.IMixinSlot",
+        "item.MixinItemStack",
+        "network.MixinClientPlayerInteractionManager",
+        "network.MixinClientPlayNetworkHandler",
+        "recipe.IMixinClientRecipeBook",
+        "recipe.IMixinCraftingResultSlot",
+        "recipe.IMixinRecipeBookWidget",
+        "recipe.MixinClientRecipeBook",
+        "screen.IMixinAbstractCraftingScreenHandler",
+        "screen.IMixinMerchantScreen",
+        "screen.IMixinRecipeBookScreen",
+        "screen.IMixinScreenWithHandler",
+        "screen.MixinCraftingScreenHandler",
+        "screen.MixinHandledScreen",
+        "screen.MixinMerchantScreen",
+        "screen.MixinMerchantScreenHandler",
+        "screen.MixinScreen"
+    ],
+    "injectors": {
+        "defaultRequire": 1
+  }
+}

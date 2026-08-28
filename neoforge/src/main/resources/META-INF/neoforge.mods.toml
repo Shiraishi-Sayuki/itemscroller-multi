@@ -1,0 +1,39 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "LGPLv3"
+
+[[mods]]
+modId = "itemscroller"
+version = "${mod_version}"
+displayName = "Item Scroller"
+displayURL = "https://github.com/maruohon/itemscroller"
+logoFile = "assets/itemscroller/icon.png"
+credits = "masa"
+authors = "masa, Shiraishi-Sayuki (multiloader port)"
+description = '''
+Moves items in inventory screens by dragging, scrolling etc.
+'''
+
+[[mixins]]
+config = "mixins.itemscroller.json"
+
+[[dependencies.itemscroller]]
+modId = "neoforge"
+mandatory = true
+versionRange = "[26.2,)"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.itemscroller]]
+modId = "minecraft"
+mandatory = true
+versionRange = "[26.2,26.3)"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.itemscroller]]
+modId = "malilib"
+mandatory = true
+versionRange = "[0.26.2,)"
+ordering = "AFTER"
+side = "CLIENT"
