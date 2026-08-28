@@ -362,8 +362,15 @@ public class KeybindCallbacks implements IHotkeyCallback, IClientTickHandler
                 this.badRecipeClicks -= MathUtils.max((badLimit / 8), 1);
             }
 
-            InventoryUtils.shiftClickSlot(gui, outputSlot.index);
-            InventoryUtils.dropStack(gui, outputSlot.index);
+            if (Configs.Generic.MASS_CRAFT_DROP_DIRECT.getBooleanValue() || Configs.Generic.CARPET_CTRL_Q_CRAFTING.getBooleanValue())
+            {
+                InventoryUtils.dropStack(gui, outputSlot.index);
+            }
+            else
+            {
+                InventoryUtils.shiftClickSlot(gui, outputSlot.index);
+                InventoryUtils.dropStack(gui, outputSlot.index);
+            }
         }
 
         InventoryUtils.tryClearCursor(gui);
@@ -402,7 +409,14 @@ public class KeybindCallbacks implements IHotkeyCallback, IClientTickHandler
                 break;
             }
 
-            InventoryUtils.shiftClickSlot(gui, outputSlot.index);
+            if (Configs.Generic.MASS_CRAFT_DROP_DIRECT.getBooleanValue() || Configs.Generic.CARPET_CTRL_Q_CRAFTING.getBooleanValue())
+            {
+                InventoryUtils.dropStack(gui, outputSlot.index);
+            }
+            else
+            {
+                InventoryUtils.shiftClickSlot(gui, outputSlot.index);
+            }
             //System.out.println("Shift clicked");
         }
     }
@@ -430,7 +444,7 @@ public class KeybindCallbacks implements IHotkeyCallback, IClientTickHandler
                 break;
             }
 
-            if (Configs.Generic.CARPET_CTRL_Q_CRAFTING.getBooleanValue())
+            if (Configs.Generic.MASS_CRAFT_DROP_DIRECT.getBooleanValue() || Configs.Generic.CARPET_CTRL_Q_CRAFTING.getBooleanValue())
             {
                 InventoryUtils.dropStack(gui, outputSlot.index);
             }

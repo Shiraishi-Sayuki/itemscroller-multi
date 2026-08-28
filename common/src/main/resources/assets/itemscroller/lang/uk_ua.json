@@ -193,5 +193,8 @@
     "itemscroller.hotkeys.category.hotkeys": "Hotkeys",
     "itemscroller.message.toggled_mod_off": "§cУВІМК.§r усі функції прокручування предметів",
     "itemscroller.message.toggled_mod_on": "§aВИМК.§r усі функції прокручування предметів",
-    "modmenu.descriptionTranslation.itemscroller": "Переміщуйте предмети в інвентарях, прокручуючи колесо миші або перетягуючи через слоти"
+    "modmenu.descriptionTranslation.itemscroller": "Переміщуйте предмети в інвентарях, прокручуючи колесо миші або перетягуючи через слоти",
+    "itemscroller.config.generic.comment.massCraftDropDirect": "When enabled, mass craft will directly drop/throw the results\nvia the Drop key (ContainerInput.THROW) instead of\nshift-clicking them to the inventory first.\nUseful to avoid filling inventory before dropping.",
+    "itemscroller.config.generic.name.massCraftDropDirect": "massCraftDropDirect",
+    "itemscroller.config.generic.prettyName.massCraftDropDirect": "Mass Craft Drop Direct"
 }

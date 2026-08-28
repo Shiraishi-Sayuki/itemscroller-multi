@@ -193,5 +193,8 @@
     "itemscroller.hotkeys.category.hotkeys": "Teclas Rápidas",
     "itemscroller.message.toggled_mod_off": "Activar todas las funionalidades de Item Scroller §cOFF",
     "itemscroller.message.toggled_mod_on": "Activar todas las funcionalidades de Item Scroller §aON",
-    "modmenu.descriptionTranslation.itemscroller": "Mueve elementos en las GUI de inventario desplazando la rueda del mouse o arrastrándolos sobre las ranuras"
+    "modmenu.descriptionTranslation.itemscroller": "Mueve elementos en las GUI de inventario desplazando la rueda del mouse o arrastrándolos sobre las ranuras",
+    "itemscroller.config.generic.comment.massCraftDropDirect": "When enabled, mass craft will directly drop/throw the results\nvia the Drop key (ContainerInput.THROW) instead of\nshift-clicking them to the inventory first.\nUseful to avoid filling inventory before dropping.",
+    "itemscroller.config.generic.name.massCraftDropDirect": "massCraftDropDirect",
+    "itemscroller.config.generic.prettyName.massCraftDropDirect": "Mass Craft Drop Direct"
 }

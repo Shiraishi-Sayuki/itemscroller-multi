@@ -193,5 +193,8 @@
     "itemscroller.hotkeys.category.hotkeys": "快捷键",
     "itemscroller.message.toggled_mod_off": "已关闭物品滚轮mod所有功能 §cOFF",
     "itemscroller.message.toggled_mod_on": "已启用物品滚轮mod所有功能 §aON",
-    "modmenu.descriptionTranslation.itemscroller": "通过滚动鼠标滚轮或在槽位上拖按鼠标来移动库存 GUI 中的物品"
+    "modmenu.descriptionTranslation.itemscroller": "通过滚动鼠标滚轮或在槽位上拖按鼠标来移动库存 GUI 中的物品",
+    "itemscroller.config.generic.comment.massCraftDropDirect": "When enabled, mass craft will directly drop/throw the results\nvia the Drop key (ContainerInput.THROW) instead of\nshift-clicking them to the inventory first.\nUseful to avoid filling inventory before dropping.",
+    "itemscroller.config.generic.name.massCraftDropDirect": "massCraftDropDirect",
+    "itemscroller.config.generic.prettyName.massCraftDropDirect": "Mass Craft Drop Direct"
 }
