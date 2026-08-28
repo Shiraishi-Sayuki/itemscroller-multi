@@ -601,9 +601,9 @@ public class InventoryUtils
     }
 
     public static void dropStacks(HandledScreen<? extends ScreenHandler> gui,
-                                  ItemStack stackReference,
-                                  Slot slotReference,
-                                  boolean sameInventory)
+                                   ItemStack stackReference,
+                                   Slot slotReference,
+                                   boolean sameInventory)
     {
         if (slotReference != null && isStackEmpty(stackReference) == false)
         {
@@ -614,8 +614,9 @@ public class InventoryUtils
             {
                 // If this slot is in the same inventory that the items were picked up to the cursor from
                 // and the stack is identical to the one in the cursor, then this stack will get dropped.
+                // Use areItemsEqual to match item only, not count/NBT size (fixes drop matching when amount differs)
                 if (areSlotsInSameInventory(slot, slotReference) == sameInventory &&
-                    areStacksEqual(slot.getStack(), stackReference))
+                    ItemStack.areItemsEqual(slot.getStack(), stackReference))
                 {
                     // Drop the stack
                     dropStack(gui, slot.id);
@@ -634,7 +635,7 @@ public class InventoryUtils
 
             for (Slot slot : container.slots)
             {
-                if (areStacksEqual(slot.getStack(), stackReference))
+                if (ItemStack.areItemsEqual(slot.getStack(), stackReference))
                 {
                     // Drop the stack
                     dropStack(gui, slot.id);
