@@ -614,9 +614,9 @@ public class InventoryUtils
             {
                 // If this slot is in the same inventory that the items were picked up to the cursor from
                 // and the stack is identical to the one in the cursor, then this stack will get dropped.
-                // Use areItemsEqual to match item only, not count/NBT size (fixes drop matching when amount differs)
+                // Use areStacksEqualIgnoreCount to match item+NBT, not count (fixes drop matching when amount differs)
                 if (areSlotsInSameInventory(slot, slotReference) == sameInventory &&
-                    ItemStack.areItemsEqual(slot.getStack(), stackReference))
+                    areStacksEqualIgnoreCount(slot.getStack(), stackReference))
                 {
                     // Drop the stack
                     dropStack(gui, slot.id);
@@ -635,7 +635,7 @@ public class InventoryUtils
 
             for (Slot slot : container.slots)
             {
-                if (ItemStack.areItemsEqual(slot.getStack(), stackReference))
+                if (areStacksEqualIgnoreCount(slot.getStack(), stackReference))
                 {
                     // Drop the stack
                     dropStack(gui, slot.id);
@@ -1388,7 +1388,7 @@ public class InventoryUtils
             Slot slotTmp = gui.getScreenHandler().getSlot(slotNum);
 
             if (slotTmp != null && slotTmp.hasStack() &&
-                (clearNonMatchingOnly == false || areStacksEqual(recipe.getRecipeItems()[i], slotTmp.getStack()) == false))
+                (clearNonMatchingOnly == false || areStacksEqualIgnoreCount(recipe.getRecipeItems()[i], slotTmp.getStack()) == false))
             {
                 shiftClickSlot(gui, slotNum);
 
@@ -1511,8 +1511,8 @@ public class InventoryUtils
 
             ItemStack stackCursor = gui.getScreenHandler().getCursorStack();
 
-            // Successfully picked up ingredient items
-            if (areStacksEqual(ingredientReference, stackCursor))
+            // Successfully picked up ingredient items (ignore count for ingredient match)
+            if (areStacksEqualIgnoreCount(ingredientReference, stackCursor))
             {
                 sizeOrig = getStackSize(stackCursor);
                 dragSplitItemsIntoSlots(gui, targetSlots);
@@ -1680,7 +1680,7 @@ public class InventoryUtils
                 Slot slotTmp = gui.getScreenHandler().getSlot(slotNum);
                 ItemStack stack = slotTmp.getStack();
 
-                if (stack.isEmpty() == false && areStacksEqual(stack, recipeItems[i]) == false)
+                if (stack.isEmpty() == false && areStacksEqualIgnoreCount(stack, recipeItems[i]) == false)
                 {
                     dropAllMatchingStacks(gui, stack);
                 }
@@ -1711,7 +1711,7 @@ public class InventoryUtils
                 ItemStack recipeStack = recipeItems[i];
                 ItemStack slotStack = craftingTableSlot.getStack();
 
-                if (areStacksEqual(recipeStack, slotStack) == false)
+                if (areStacksEqualIgnoreCount(recipeStack, slotStack) == false)
                 {
                     if (recipeStack.isEmpty())
                     {
@@ -1920,7 +1920,7 @@ public class InventoryUtils
         for (Slot slot : container.slots)
         {
             if (areSlotsInSameInventory(slot, slotReference) == false && slot.hasStack() &&
-                areStacksEqual(stackReference, slot.getStack()))
+                areStacksEqualIgnoreCount(stackReference, slot.getStack()))
             {
                 int stackSize = getStackSize(slot.getStack());
 
@@ -1953,7 +1953,7 @@ public class InventoryUtils
         for (Slot slot : container.slots)
         {
             if (areSlotsInSameInventory(slot, slotReference) == false && slot.hasStack() &&
-                areStacksEqual(stackReference, slot.getStack()))
+                areStacksEqualIgnoreCount(stackReference, slot.getStack()))
             {
                 int stackSize = getStackSize(slot.getStack());
 
@@ -2116,6 +2116,11 @@ public class InventoryUtils
     public static boolean areStacksEqual(ItemStack stack1, ItemStack stack2)
     {
         return ItemStack.areEqual(stack1, stack2);
+    }
+
+    public static boolean areStacksEqualIgnoreCount(ItemStack stack1, ItemStack stack2)
+    {
+        return ItemStack.areItemsEqual(stack1, stack2) && java.util.Objects.equals(stack1.getNbt(), stack2.getNbt());
     }
 
     private static boolean areSlotsInSameInventory(Slot slot1, Slot slot2)
