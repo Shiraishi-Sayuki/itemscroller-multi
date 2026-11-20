@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import javax.annotation.Nullable;
 import it.unimi.dsi.fastutil.Pair;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntComparator;
 import it.unimi.dsi.fastutil.ints.IntIntMutablePair;
@@ -18,10 +19,12 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.HashedStack;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundAwardStatsPacket;
 import net.minecraft.network.protocol.game.ServerboundClientCommandPacket;
+import net.minecraft.network.protocol.game.ServerboundContainerClickPacket;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
@@ -529,7 +532,19 @@ public class InventoryUtils
                     break;
 
                 case MOVE_TO_OTHER_STACKS:
-                    shiftClickSlot(gui, slot.index);
+                    if (isCraftingResultSlot(slot) && slot.hasItem())
+                    {
+                        // Don't run the client-side prediction for the crafting result slot.
+                        // Some mods (for example FastWorkbench) perform the entire bulk crafting
+                        // operation synchronously in the prediction path, which freezes the client
+                        // for several seconds when there are many recipes. The server does the
+                        // actual crafting anyway, and will sync the resulting slots back to us.
+                        quickMoveSlotWithoutPrediction(gui, slot);
+                    }
+                    else
+                    {
+                        shiftClickSlot(gui, slot.index);
+                    }
                     break;
 
                 case MOVE_TO_OTHER_MATCHING:
@@ -3408,6 +3423,57 @@ public class InventoryUtils
     public static void shiftClickSlot(AbstractContainerScreen<? extends AbstractContainerMenu> gui, int slotNum)
     {
         clickSlot(gui, slotNum, 0, ContainerInput.QUICK_MOVE);
+    }
+
+    /**
+     * Returns true if the given slot is the crafting result slot of the current screen.
+     * This is checked via the backing container, so that it also covers custom result slot
+     * implementations from other mods (such as FastWorkbench).
+     */
+    public static boolean isCraftingResultSlot(Slot slot)
+    {
+        return slot.container instanceof ResultContainer;
+    }
+
+    /**
+     * Sends a quick move (shift click) packet for the given slot <b>without</b> running the
+     * client-side prediction code in {@code MultiPlayerGameMode#handleInventoryMouseClick}.
+     * <p>
+     * Some mods (for example FastWorkbench) perform the whole bulk crafting operation
+     * synchronously inside the client-side prediction path when the crafting result slot is
+     * shift-clicked. That work then happens on the render thread and freezes the game for
+     * several seconds with large recipe sets. Since the actual crafting is done by the server
+     * anyway, sending the packet directly avoids that client-side work, and the resulting
+     * slot contents are synced back by the server.
+     */
+    public static void quickMoveSlotWithoutPrediction(AbstractContainerScreen<? extends AbstractContainerMenu> gui, Slot slot)
+    {
+        Minecraft mc = Minecraft.getInstance();
+
+        if (mc.getConnection() == null || mc.player == null)
+        {
+            return;
+        }
+
+        try
+        {
+            AbstractContainerMenu menu = gui.getMenu();
+            HashedStack carriedItem = HashedStack.create(menu.getCarried(),
+                                                         mc.getConnection().decoratedHashOpsGenenerator());
+            ServerboundContainerClickPacket packet = new ServerboundContainerClickPacket(menu.containerId,
+                                                                                          menu.getStateId(),
+                                                                                          (short) slot.index, (byte) 0,
+                                                                                          ContainerInput.QUICK_MOVE,
+                                                                                          Int2ObjectMaps.emptyMap(),
+                                                                                          carriedItem);
+
+            mc.getConnection().send(packet);
+        }
+        catch (Exception e)
+        {
+            ItemScroller.LOGGER.warn("Exception while sending a quick move packet without prediction: gui: '{}', slot: {}",
+                                     gui.getClass().getName(), slot.index, e);
+        }
     }
 
     public static void dropItemsFromCursor(AbstractContainerScreen<? extends AbstractContainerMenu> gui)
