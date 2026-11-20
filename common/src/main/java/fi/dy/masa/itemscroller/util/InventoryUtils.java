@@ -7,6 +7,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import it.unimi.dsi.fastutil.Pair;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntComparator;
 
@@ -30,6 +31,7 @@ import net.minecraft.inventory.RecipeInputInventory;
 import net.minecraft.item.*;
 import net.minecraft.network.listener.ClientPlayPacketListener;
 import net.minecraft.network.packet.Packet;
+import net.minecraft.network.packet.c2s.play.ClickSlotC2SPacket;
 import net.minecraft.network.packet.c2s.play.ClientStatusC2SPacket;
 import net.minecraft.network.packet.s2c.play.StatisticsS2CPacket;
 import net.minecraft.recipe.CraftingRecipe;
@@ -524,7 +526,19 @@ public class InventoryUtils
                     break;
 
                 case MOVE_TO_OTHER_STACKS:
-                    shiftClickSlot(gui, slot.id);
+                    if (isCraftingResultSlot(slot) && slot.hasStack())
+                    {
+                        // Don't run the client-side prediction for the crafting result slot.
+                        // Some mods (for example FastWorkbench) perform the entire bulk crafting
+                        // operation synchronously in the prediction path, which freezes the client
+                        // for several seconds when there are many recipes. The server does the
+                        // actual crafting anyway, and will sync the resulting slots back to us.
+                        quickMoveSlotWithoutPrediction(gui, slot);
+                    }
+                    else
+                    {
+                        shiftClickSlot(gui, slot.id);
+                    }
                     break;
 
                 case MOVE_TO_OTHER_MATCHING:
@@ -3402,6 +3416,53 @@ public class InventoryUtils
     public static void shiftClickSlot(HandledScreen<? extends ScreenHandler> gui, int slotNum)
     {
         clickSlot(gui, slotNum, 0, SlotActionType.QUICK_MOVE);
+    }
+
+    /**
+     * Returns true if the given slot is the crafting result slot of the current screen.
+     * This is checked via the backing inventory, so that it also covers custom result slot
+     * implementations from other mods (such as FastWorkbench).
+     */
+    public static boolean isCraftingResultSlot(Slot slot)
+    {
+        return slot.inventory instanceof CraftingResultInventory;
+    }
+
+    /**
+     * Sends a quick move (shift click) packet for the given slot <b>without</b> running the
+     * client-side prediction code in {@code ClientPlayerInteractionManager#clickSlot}.
+     * <p>
+     * Some mods (for example FastWorkbench) perform the whole bulk crafting operation
+     * synchronously inside the client-side prediction path when the crafting result slot is
+     * shift-clicked. That work then happens on the render thread and freezes the game for
+     * several seconds with large recipe sets. Since the actual crafting is done by the server
+     * anyway, sending the packet directly avoids that client-side work, and the resulting
+     * slot contents are synced back by the server.
+     */
+    public static void quickMoveSlotWithoutPrediction(HandledScreen<? extends ScreenHandler> gui, Slot slot)
+    {
+        MinecraftClient mc = MinecraftClient.getInstance();
+
+        if (mc.getNetworkHandler() == null || mc.player == null)
+        {
+            return;
+        }
+
+        try
+        {
+            ScreenHandler handler = gui.getScreenHandler();
+            ClickSlotC2SPacket packet = new ClickSlotC2SPacket(handler.syncId, handler.getRevision(),
+                                                              slot.id, 0, SlotActionType.QUICK_MOVE,
+                                                              handler.getCursorStack().copy(),
+                                                              Int2ObjectMaps.emptyMap());
+
+            PacketUtils.sendPacket(mc.getNetworkHandler(), packet);
+        }
+        catch (Exception e)
+        {
+            ItemScroller.LOGGER.warn("Exception while sending a quick move packet without prediction: gui: '{}', slot: {}",
+                                     gui.getClass().getName(), slot.id, e);
+        }
     }
 
     public static void dropItemsFromCursor(HandledScreen<? extends ScreenHandler> gui)
