@@ -77,6 +77,19 @@ public class InventoryUtils
     private static int lastPosY;
     private static int slotNumberLast;
     private static boolean inhibitCraftResultUpdate;
+    /**
+     * Tracks how many times the client-side crafting result has been recalculated during the
+     * current client tick. A single tick can contain a huge number of inventory slot changes
+     * (for example when a whole 9x64 crafting grid is shift-clicked at once, or when another
+     * mod performs a bulk crafting loop), and recalculating the result for every single one of
+     * those changes means running {@code RecipeManager#getFirstMatch} plus {@code recipe.craft()}
+     * hundreds of times per tick. That work is what turns a bulk craft into a multi-second freeze
+     * on the render thread.
+     */
+    private static long craftResultUpdateTick = Long.MIN_VALUE;
+    private static int craftResultUpdatesThisTick;
+    private static final int MAX_CRAFT_RESULT_UPDATES_PER_TICK = 2;
+    private static int craftResultUpdateDepth;
     private static Runnable selectedSlotUpdateTask;
     public static boolean assumeEmptyShulkerStacking = false;
     private static List<String> topSortingPriorityList = Configs.Generic.SORT_TOP_PRIORITY_INVENTORY.getStrings();
@@ -106,9 +119,52 @@ public class InventoryUtils
 //            return;
 //        }
 
-        if (Configs.Generic.CLIENT_CRAFTING_FIX.getBooleanValue())
+        if (Configs.Generic.CLIENT_CRAFTING_FIX.getBooleanValue() == false)
+        {
+            return;
+        }
+
+        // Never recurse into ourselves: setting the result slot can itself trigger another
+        // content change notification, which would otherwise loop back in here.
+        if (craftResultUpdateDepth > 0)
+        {
+            return;
+        }
+
+        // Debounce the client-side recompute to a couple of updates per client tick.
+        // Vanilla already recalculates the crafting result itself, so the extra ItemScroller
+        // pass is only a desync workaround and does not need to run for every single slot
+        // change inside one tick. Without this guard a bulk craft in a single tick performs
+        // one full recipe lookup + recipe assembly per slot change instead of two per tick.
+        final MinecraftClient mc = MinecraftClient.getInstance();
+
+        if (mc.world != null)
+        {
+            final long tick = mc.world.getTime();
+
+            if (tick != craftResultUpdateTick)
+            {
+                craftResultUpdateTick = tick;
+                craftResultUpdatesThisTick = 0;
+            }
+
+            if (craftResultUpdatesThisTick >= MAX_CRAFT_RESULT_UPDATES_PER_TICK)
+            {
+                return;
+            }
+
+            craftResultUpdatesThisTick++;
+        }
+
+        craftResultUpdateDepth++;
+
+        try
         {
             updateCraftingOutputSlot(player, craftMatrix, inventoryCraftResult, true);
+        }
+        finally
+        {
+            craftResultUpdateDepth--;
         }
     }
 
